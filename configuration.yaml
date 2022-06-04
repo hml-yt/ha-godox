@@ -1,0 +1,4 @@
+light:
+  - platform: godox
+    name: "Studio Godox Light"
+    mac: "D8:71:4D:31:09:68"

@@ -1,0 +1,10 @@
+{
+  "domain": "godox",
+  "name": "Godox VL150 Light",
+  "requirements": [
+    "bleak==0.14.1",
+    "crccheck==1.1"
+  ],
+  "iot_class": "assumed_state",
+  "version": "0.1.0"
+}

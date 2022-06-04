@@ -1,0 +1,1 @@
+"""The Godox Lights integration."""
