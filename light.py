@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 
 from .godox import GodoxInstance
-import voluptuous as vol
+from bleak.backends.device import BLEDevice
 
 from pprint import pformat
 
@@ -12,36 +12,40 @@ from pprint import pformat
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.light import (SUPPORT_BRIGHTNESS, ATTR_BRIGHTNESS,
                                             PLATFORM_SCHEMA, LightEntity)
-from homeassistant.const import CONF_NAME, CONF_MAC
+from homeassistant.const import CONF_NAME, CONF_ADDRESS
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.components import bluetooth
 
-_LOGGER = logging.getLogger("godox")
+from .const import DOMAIN
 
-# Validation of the user's configuration
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Optional(CONF_NAME): cv.string,
-    vol.Required(CONF_MAC): cv.string,
-})
+_LOGGER = logging.getLogger(__name__)
 
-
-def setup_platform(
-    hass: HomeAssistant,
-    config: ConfigType,
-    add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None
-) -> None:
-    """Set up the Godox Light platform."""
-    # Add devices
-    _LOGGER.info(pformat(config))
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+) -> bool:
+    """Set up a Godox Light device from a config entry."""
     
+    # address: str = entry.data[CONF_ADDRESS]
+    _LOGGER.info('Async setup entry in platform', pformat(entry))
+
+    ble_device: BLEDevice = bluetooth.async_ble_device_from_address(
+        hass, entry.data[CONF_ADDRESS]
+    )
+
     light = {
-        "name": config[CONF_NAME],
-        "mac": config[CONF_MAC]
+        "name": entry.title,
+        "device": ble_device
     }
-    
-    add_entities([GodoxLight(light)])
+    _LOGGER.info('Light is: ', pformat(light))
+
+    async_add_entities([GodoxLight(light)])
+
+    return True
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    return True
 
 class GodoxLight(LightEntity):
     """Representation of an Godox Light."""
@@ -49,7 +53,7 @@ class GodoxLight(LightEntity):
     def __init__(self, light) -> None:
         """Initialize an GodoxLight."""
         _LOGGER.info(pformat(light))
-        self._light = GodoxInstance(light["mac"])
+        self._light = GodoxInstance(light["device"])
         self._name = light["name"]
         self._state = None
         self._brightness = None
@@ -95,4 +99,4 @@ class GodoxLight(LightEntity):
         This is the only method that should fetch new data for Home Assistant.
         """
         self._state = self._light.is_on
-        self._brightness = self._light.brightness
+        self._brightness = self._light.brightness    

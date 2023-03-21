@@ -1,21 +1,15 @@
 import asyncio
-from bleak import BleakClient, BleakScanner
+from bleak.backends.device import BLEDevice
+from bleak import BleakClient
 from crccheck.crc import Crc8Maxim
 import logging
 
 WRITE_UUID = "0000fec7-0000-1000-8000-00805f9b34fb"
 LOGGER = logging.getLogger(__name__)
 
-async def discover():
-    """Discover Bluetooth LE devices."""
-    devices = await BleakScanner.discover()
-    LOGGER.debug("Discovered devices: %s", [{"address": device.address, "name": device.name} for device in devices])
-    return [device for device in devices if device.name.startswith("GDB5")]
-
 class GodoxInstance:
-    def __init__(self, mac: str) -> None:
-        self._mac = mac
-        self._device = BleakClient(self._mac)
+    def __init__(self, ble_device: BLEDevice) -> None:
+        self._ble_device = ble_device
         self._is_on = None
         self._connected = None
         self._brightness = None
@@ -29,10 +23,6 @@ class GodoxInstance:
         crcinst = Crc8Maxim()
         crcinst.process(data)
         await self._device.write_gatt_char(WRITE_UUID, data + crcinst.finalbytes())
-
-    @property
-    def mac(self):
-        return self._mac
 
     @property
     def is_on(self):
@@ -68,6 +58,7 @@ class GodoxInstance:
         self._is_on = False
 
     async def connect(self):
+        self._device = BleakClient(self._ble_device)
         await self._device.connect(timeout=20)
         await asyncio.sleep(1)
         self._connected = True
